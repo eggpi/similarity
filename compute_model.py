@@ -118,7 +118,7 @@ def main():
             input='file', strip_accents = 'unicode', analyzer = 'word',
             tokenizer = model.StemmingTokenizer(), stop_words = 'english',
             sublinear_tf = True, use_idf = True, min_df = 0.0001,
-            max_df = 0.50, norm = 'l2')
+            max_df = 0.20, norm = 'l2')
 
         if o.reuse_train_documents and hasattr(existing_model, 'train_documents'):
             train_documents = existing_model.train_documents
