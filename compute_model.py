@@ -138,7 +138,8 @@ def main():
         print 'fitting documents...'
         old_analyzer, vectorizer.analyzer = (
             vectorizer.analyzer, lambda d: ngram_cache[d.filename])
-        repository = vectorizer.fit_transform(train_documents)
+        repository = vectorizer.fit_transform(train_documents).astype(
+            np.float16)  # save some memory
         vectorizer.analyzer = old_analyzer
 
         # don't need this stuff anymore, let's save some memory
