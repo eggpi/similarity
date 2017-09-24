@@ -14,10 +14,8 @@ model_path = os.environ.get(
 Model = model.Model  # need this to unpickle
 m = joblib.load(model_path)
 
-@app.route('/', methods = ['GET', 'POST'])
-def similarity():
-    if flask.request.method == 'GET':
-        return flask.render_template('index.html')
+@app.route('/search', methods = ['POST'])
+def search():
     if 'text' not in flask.request.form or not flask.request.form['text']:
         return ('POST some data with a "text" form key\n', 400, '')
     text = flask.request.form['text'].encode('utf-8')
@@ -26,6 +24,10 @@ def similarity():
         'title': match['title'],
         'url': match['url'],
     } for match in matches])
+
+@app.route('/', methods = ['GET', 'POST'])
+def similarity():
+    return flask.render_template('index.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
