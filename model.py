@@ -5,7 +5,7 @@ A TF-IDF model of Wikitext.
 '''
 
 import numpy as np
-from sklearn.metrics.pairwise import linear_kernel
+from sklearn.utils.extmath import safe_sparse_dot
 from nltk.stem.snowball import EnglishStemmer
 from nltk import word_tokenize
 import mwparserfromhell as mwp
@@ -69,8 +69,18 @@ class Model(object):
         } for lazy_doc in train_documents])
 
     def search(self, text):
-        fv = self.transformer.transform([text])
-        search_result = linear_kernel(fv, self.repository).flatten()
+        # Note: the canonical way of performing this lookup would be to just use
+        # linear_kernel. However, that function performs argument type checking
+        # which, as a side effect, copies self.repository and casts it up to
+        # dtype = np.float, using more memory than we can afford.
+        # We know in this case that the operands of the multiplication are
+        # compatible, so we just skip the checking and go straight to
+        # safe_sparse_dot, making sure to cast fv appropriately so the result is
+        # a np.float32, not np.float64.
+        fv = self.transformer.transform([text]).astype(np.float16)
+        search_result = safe_sparse_dot(
+            fv, self.repository.T, dense_output = True)
+        search_result.shape = search_result.shape[1]  # flatten without copy
         indexes = np.argpartition(search_result, -3)[-3:]
         indexes = indexes[np.argsort(search_result[indexes])]
         return self.train_documents[indexes], search_result[indexes]
