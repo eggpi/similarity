@@ -116,9 +116,9 @@ def main():
             print 'reusing n-grams for %d documents' % len(ngram_cache)
         vectorizer = TfidfVectorizer(
             input='file', strip_accents = 'unicode', analyzer = 'word',
-            tokenizer = model.StemmingTokenizer(), stop_words = 'english',
-            sublinear_tf = True, use_idf = True, min_df = 0.0001,
-            max_df = 0.20, norm = 'l2')
+            tokenizer = model.WikitextStemmingTokenizer(),
+            stop_words = 'english', sublinear_tf = True, use_idf = True,
+            min_df = 0.0001, max_df = 0.20, norm = 'l2')
 
         if o.reuse_train_documents and hasattr(existing_model, 'train_documents'):
             train_documents = existing_model.train_documents
@@ -149,6 +149,7 @@ def main():
         print '%d words in the vocabulary, sample: %r' % (
             len(vectorizer.vocabulary_),
             random.sample(vectorizer.vocabulary_.keys(), 300))
+        vectorizer.tokenizer = vectorizer.tokenizer.text_tokenizer()
 
         if int(o.n_svd_components):
             print 'performing SVD step (%s components)...' % o.n_svd_components

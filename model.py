@@ -18,6 +18,25 @@ class StemmingTokenizer(object):
     def __init__(self):
         self._stemmer = EnglishStemmer()
 
+    def text_tokenizer(self):
+        return self
+
+    def __call__(self, doc):
+        tokens = []
+        for w in word_tokenize(doc):
+            t = self._stemmer.stem(w)
+            t = t.strip(string.punctuation + string.digits)
+            if len(t) > 3 and '|' not in t:
+                tokens.append(t)
+        return tokens
+
+class WikitextStemmingTokenizer(object):
+    def __init__(self):
+        self._tokenizer = StemmingTokenizer()
+
+    def text_tokenizer(self):
+        return self._tokenizer
+
     def __call__(self, doc):
         wdoc = mwp.parse(doc)
         for section in wdoc.get_sections(include_headings = True):
@@ -28,14 +47,7 @@ class StemmingTokenizer(object):
             except (IndexError, AttributeError):
                 # No heading or empty section?
                 pass
-
-        tokens = []
-        for w in word_tokenize(wdoc.strip_code()):
-            t = self._stemmer.stem(w)
-            t = t.strip(string.punctuation + string.digits)
-            if len(t) > 3 and '|' not in t:
-                tokens.append(t)
-        return tokens
+        return self._tokenizer(wdoc.strip_code())
 
 class LazyDoc(object):
     def __init__(self, filename):
