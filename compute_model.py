@@ -54,7 +54,6 @@ def mkdir_p(path):
             raise
 
 MAX_EXCEPTIONS_PER_DOC = 20
-SECTIONS_TO_REMOVE = ('references', 'see also', 'external links', 'footnotes')
 
 def load_train_docs():
     documents = []

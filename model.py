@@ -31,6 +31,10 @@ class StemmingTokenizer(object):
         return tokens
 
 class WikitextStemmingTokenizer(object):
+    SECTIONS_TO_REMOVE = set([
+        'references', 'see also', 'external links', 'footnotes'
+    ])
+
     def __init__(self):
         self._tokenizer = StemmingTokenizer()
 
@@ -42,7 +46,7 @@ class WikitextStemmingTokenizer(object):
         for section in wdoc.get_sections(include_headings = True):
             try:
                 title = section.get(0).title.strip().lower()
-                if title in SECTIONS_TO_REMOVE:
+                if title in self.SECTIONS_TO_REMOVE:
                     wdoc.remove(section)
             except (IndexError, AttributeError):
                 # No heading or empty section?
@@ -93,6 +97,6 @@ class Model(object):
         search_result = safe_sparse_dot(
             fv, self.repository.T, dense_output = True)
         search_result.shape = search_result.shape[1]  # flatten without copy
-        indexes = np.argpartition(search_result, -3)[-3:]
+        indexes = np.argpartition(search_result, -5)[-5:]
         indexes = indexes[np.argsort(search_result[indexes])]
         return self.train_documents[indexes], search_result[indexes]
