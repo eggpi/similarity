@@ -49,11 +49,12 @@ def search():
         return ('POST some data with a "text" form key\n', 400, '')
     html = flask.request.form['text']
     text = html_to_text(html).encode('utf-8')
-    matches, _ = m.search(StringIO.StringIO(text))
+    matches, similarities = m.search(StringIO.StringIO(text))
     return flask.jsonify([{
         'title': match['title'],
         'url': match['url'],
-    } for match in matches])
+        'similarity': str(s),
+    } for match, s in zip(matches, similarities)])
 
 @app.route('/', methods = ['GET', 'POST'])
 def similarity():
