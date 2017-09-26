@@ -34,10 +34,10 @@ def html_to_text(html):
         StringIO.StringIO(html.encode('utf-8')),
         parser = lxml.html.HTMLParser(
             encoding = 'utf-8', remove_comments = True)).getroot()
-    description = tree.cssselect('meta[name="description"]')
-    if description:
-        # TODO would be cool to boost this in the search somehow
-        description = description[0].get('content')
+    # TODO would be cool to boost this in the search somehow
+    description = '\n'.join(
+        tag.get('content')
+        for tag in tree.cssselect('meta[name="description"]'))
     for s in CSS_SELECTORS_TO_REMOVE:
         for e in tree.cssselect(s):
             lxml_utils.remove_element(e)
