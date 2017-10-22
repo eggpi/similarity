@@ -3,8 +3,10 @@ import lxml_utils
 
 import flask
 import lxml.html
+import requests
 from sklearn.externals import joblib
 
+import json
 import os
 import cStringIO as StringIO
 
@@ -28,6 +30,13 @@ CSS_SELECTORS_TO_REMOVE = [
     'style',
 ]
 
+import re
+
+COLLAPSE_SPACES_REGEX = re.compile(r'\s+')
+
+def collapse_spaces(text):
+    return COLLAPSE_SPACES_REGEX.sub(' ', text)
+
 def html_to_text(html):
     assert isinstance(html, unicode)
     tree = lxml.html.parse(
@@ -35,20 +44,54 @@ def html_to_text(html):
         parser = lxml.html.HTMLParser(
             encoding = 'utf-8', remove_comments = True)).getroot()
     # TODO would be cool to boost this in the search somehow
-    description = '\n'.join(
+    description = ' '.join(
         tag.get('content')
         for tag in tree.cssselect('meta[name="description"]'))
     for s in CSS_SELECTORS_TO_REMOVE:
         for e in tree.cssselect(s):
             lxml_utils.remove_element(e)
-    return description + '\n' + tree.text_content()
+    return collapse_spaces(description), collapse_spaces(tree.text_content())
+
+@app.route('/elasticsearch', methods = ['POST'])
+def elasticsearch():
+    if 'text' not in flask.request.form or not flask.request.form['text']:
+        return ('POST some data with a "text" form key\n', 400, '')
+    html = flask.request.form['text']
+    description, text = html_to_text(html)
+    print text
+    res = requests.post('http://localhost:9200/_search', json.dumps({
+        'size': 5,
+        'query': {
+            'bool': {
+                'must': {
+                    'more_like_this': {
+                        'like_text': text,
+                        'fields': ['wikitext'],
+                        'max_doc_freq': 1000,
+                    }
+                },
+                'should': {
+                    'match': {
+                        'wikitext': description,
+                    }
+                }
+            }
+        }
+    })).json()
+    return flask.jsonify([{
+        'title': h['_source']['title'],
+        'url': h['_source']['url'],
+        'similarity': h['_score'],
+        'pageid': h['_source']['pageid'],
+    } for h in res['hits']['hits']])
 
 @app.route('/search', methods = ['POST'])
 def search():
     if 'text' not in flask.request.form or not flask.request.form['text']:
         return ('POST some data with a "text" form key\n', 400, '')
     html = flask.request.form['text']
-    text = html_to_text(html).encode('utf-8')
+    _, text = html_to_text(html).encode('utf-8')
+    print text
     matches, similarities = m.search(StringIO.StringIO(text))
     return flask.jsonify([{
         'title': match['title'],
