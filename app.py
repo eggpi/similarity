@@ -90,9 +90,10 @@ def search():
     if 'text' not in flask.request.form or not flask.request.form['text']:
         return ('POST some data with a "text" form key\n', 400, '')
     html = flask.request.form['text']
-    _, text = html_to_text(html).encode('utf-8')
-    print text
-    matches, similarities = m.search(StringIO.StringIO(text))
+    description, text = html_to_text(html)
+    query = (description + '\n' + text).encode('utf-8')
+    print query
+    matches, similarities = m.search(StringIO.StringIO(query))
     return flask.jsonify([{
         'title': match['title'],
         'url': match['url'],
