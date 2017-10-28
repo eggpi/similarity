@@ -22,36 +22,53 @@ CSS_SELECTORS_TO_REMOVE = [
     'noindex',
     'script',
     'style',
+    'img',
 ]
 
 import re
+
+URL_REGEX_TO_SELECTOR = {
+    re.compile('theguardian.com/.+'): '*[data-test-id=article-review-body]',
+    re.compile('irishtimes.com/.+'): '.article_bodycopy',
+    re.compile('npr.org/.+'): '#storytext',
+    re.compile('washingtonpost.com/.+'): 'article',
+    re.compile('nytimes.com/.+'): '#story',
+    re.compile('arstechnica.(com|co.uk)/.+'): '.article-content',
+    re.compile('economist.com/.+'): 'article',
+}
 
 COLLAPSE_SPACES_REGEX = re.compile(r'\s+')
 
 def collapse_spaces(text):
     return COLLAPSE_SPACES_REGEX.sub(' ', text)
 
-def html_to_text(html):
+def html_to_text(html, url=None):
     assert isinstance(html, unicode)
     tree = lxml.html.parse(
         StringIO.StringIO(html.encode('utf-8')),
         parser = lxml.html.HTMLParser(
             encoding = 'utf-8', remove_comments = True)).getroot()
-    # TODO would be cool to boost this in the search somehow
     description = ' '.join(
         tag.get('content')
         for tag in tree.cssselect('meta[name="description"]'))
+    if url:
+        for r, s in URL_REGEX_TO_SELECTOR.items():
+            if r.search(url):
+                tree = tree.cssselect(s)[0]
+                break
     for s in CSS_SELECTORS_TO_REMOVE:
         for e in tree.cssselect(s):
             lxml_utils.remove_element(e)
     return collapse_spaces(description), collapse_spaces(tree.text_content())
 
-@app.route('/elasticsearch', methods = ['POST'])
-def elasticsearch():
+@app.route('/search', methods = ['POST'])
+def search():
     if 'html' not in flask.request.form or not flask.request.form['html']:
         return ('POST some data with a "html" form key\n', 400, '')
     html = flask.request.form['html']
-    description, text = html_to_text(html)
+    url = flask.request.form.get('url', None)
+    description, text = html_to_text(html, url)
+    print description
     print text
     res = requests.post('http://localhost:9200/_search', json.dumps({
         'size': 5,
