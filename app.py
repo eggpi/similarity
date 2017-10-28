@@ -1,4 +1,3 @@
-import model
 import lxml_utils
 
 import flask
@@ -12,11 +11,6 @@ import cStringIO as StringIO
 
 app = flask.Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
-model_path = os.environ.get(
-    'SIMILARITY_MODEL',
-    os.path.expanduser(os.path.join('~', 'model.pkl')))
-Model = model.Model  # need this to unpickle
-m = joblib.load(model_path)
 
 CSS_SELECTORS_TO_REMOVE = [
     '.hidden',
@@ -54,9 +48,9 @@ def html_to_text(html):
 
 @app.route('/elasticsearch', methods = ['POST'])
 def elasticsearch():
-    if 'text' not in flask.request.form or not flask.request.form['text']:
-        return ('POST some data with a "text" form key\n', 400, '')
-    html = flask.request.form['text']
+    if 'html' not in flask.request.form or not flask.request.form['html']:
+        return ('POST some data with a "html" form key\n', 400, '')
+    html = flask.request.form['html']
     description, text = html_to_text(html)
     print text
     res = requests.post('http://localhost:9200/_search', json.dumps({
@@ -84,21 +78,6 @@ def elasticsearch():
         'similarity': h['_score'],
         'pageid': h['_source']['pageid'],
     } for h in res['hits']['hits']])
-
-@app.route('/search', methods = ['POST'])
-def search():
-    if 'text' not in flask.request.form or not flask.request.form['text']:
-        return ('POST some data with a "text" form key\n', 400, '')
-    html = flask.request.form['text']
-    description, text = html_to_text(html)
-    query = (description + '\n' + text).encode('utf-8')
-    print query
-    matches, similarities = m.search(StringIO.StringIO(query))
-    return flask.jsonify([{
-        'title': match['title'],
-        'url': match['url'],
-        'similarity': str(s),
-    } for match, s in zip(matches, similarities)])
 
 @app.route('/', methods = ['GET', 'POST'])
 def similarity():
