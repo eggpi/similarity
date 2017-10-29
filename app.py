@@ -76,13 +76,13 @@ def search():
     if not text:
         return flask.jsonify([])
     res = requests.post('http://localhost:9200/_search', json.dumps({
-        'size': 5,
+        'size': 10,
         'query': {
             'bool': {
                 'must': {
                     'more_like_this': {
                         'like_text': text,
-                        'fields': ['wikitext'],
+                        'fields': ['text'],
                         'max_doc_freq': 1000,
                     }
                 },
