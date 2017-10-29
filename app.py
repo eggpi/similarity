@@ -1,4 +1,4 @@
-import .server.lxml_utils
+from server import lxml_utils
 
 import flask
 import lxml.html
@@ -9,7 +9,7 @@ import os
 import cStringIO as StringIO
 
 app = flask.Flask(__name__,
-    template_folder = os.path.join('server', 'templates')
+    template_folder = os.path.join('server', 'templates'))
 app.config['JSON_AS_ASCII'] = False
 
 CSS_SELECTORS_TO_REMOVE = [
