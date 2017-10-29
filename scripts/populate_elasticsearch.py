@@ -78,7 +78,8 @@ class State(object):
 self = State() # Per-process state
 
 def initializer(elasticsearch_url):
-    self.elasticsearch_url = elasticsearch_url
+    self.es_url = elasticsearch_url
+    self.es_session = requests.Session()
     self.wiki = yamwapi.MediaWikiAPI(WIKIPEDIA_API_URL, USER_AGENT)
     self.exception_count = 0
 
@@ -116,8 +117,7 @@ def work(pageids):
                 'title': title,
                 'text': wdoc.strip_code()
             })
-            response = requests.put(
-                self.elasticsearch_url + '/' + pageid, esdoc)
+            response = self.es_session.put(self.es_url + '/' + pageid, esdoc)
             response.raise_for_status()
 
 def fetch_pages(petscan_id, elasticsearch_url):
