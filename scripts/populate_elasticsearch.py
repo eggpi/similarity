@@ -35,7 +35,13 @@ WIKIPEDIA_API_URL = WIKIPEDIA_BASE_URL + '/w/api.php'
 MAX_EXCEPTIONS_PER_SUBPROCESS = 5
 
 SECTIONS_TO_REMOVE = set([
-    'references', 'see also', 'external links', 'footnotes'
+    'bibliography',
+    'external links',
+    'footnotes',
+    'further reading',
+    'notes',
+    'references',
+    'see also',
 ])
 
 def e(s):
