@@ -1,15 +1,15 @@
-import lxml_utils
+import .server.lxml_utils
 
 import flask
 import lxml.html
 import requests
-from sklearn.externals import joblib
 
 import json
 import os
 import cStringIO as StringIO
 
-app = flask.Flask(__name__)
+app = flask.Flask(__name__,
+    template_folder = os.path.join('server', 'templates')
 app.config['JSON_AS_ASCII'] = False
 
 CSS_SELECTORS_TO_REMOVE = [
@@ -44,7 +44,7 @@ COLLAPSE_SPACES_REGEX = re.compile(r'\s+')
 def collapse_spaces(text):
     return COLLAPSE_SPACES_REGEX.sub(' ', text)
 
-def html_to_text(html, url=None):
+def page_html_to_text(html, url=None):
     assert isinstance(html, unicode)
     tree = lxml.html.parse(
         StringIO.StringIO(html.encode('utf-8')),
@@ -70,7 +70,7 @@ def search():
         return ('POST some data with a "html" form key\n', 400, '')
     html = flask.request.form['html']
     url = flask.request.form.get('url', None)
-    description, text = html_to_text(html, url)
+    description, text = page_html_to_text(html, url)
     print description
     print text
     if not text:
