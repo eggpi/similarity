@@ -1,0 +1,20 @@
+{
+    "manifest_version": 2,
+
+    "name": "TBD",
+    "description": "This extension tells you when you're browsing a page that could be used as a reference on Wikipedia.",
+    "version": "0.1",
+
+    "page_action": {
+        "default_icon": "icon.png",
+        "default_popup": "popup.html"
+    },
+    "background": {
+        "scripts": ["background.js"],
+        "persistent": false
+    },
+    "permissions": [
+        "tabs",
+        "<all_urls>"
+    ]
+}
