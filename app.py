@@ -35,6 +35,8 @@ URL_REGEX_TO_SELECTOR = {
     re.compile('nytimes.com/.+'): '#story',
     re.compile('arstechnica.(com|co.uk)/.+'): '.article-content',
     re.compile('economist.com/.+'): 'article',
+    re.compile('time.com/.+'): 'article',
+    re.compile('bbc.(com|co.uk)/.+'): '.story-body__inner > p, .body-content',
 }
 
 COLLAPSE_SPACES_REGEX = re.compile(r'\s+')
@@ -51,15 +53,16 @@ def html_to_text(html, url=None):
     description = ' '.join(
         tag.get('content')
         for tag in tree.cssselect('meta[name="description"]'))
-    if url:
-        for r, s in URL_REGEX_TO_SELECTOR.items():
-            if r.search(url):
-                tree = tree.cssselect(s)[0]
-                break
     for s in CSS_SELECTORS_TO_REMOVE:
         for e in tree.cssselect(s):
             lxml_utils.remove_element(e)
-    return collapse_spaces(description), collapse_spaces(tree.text_content())
+    wrapper = lxml.html.Element('div')
+    if url:
+        for r, s in URL_REGEX_TO_SELECTOR.items():
+            if r.search(url):
+                wrapper.extend(tree.cssselect(s))
+                break
+    return collapse_spaces(description), collapse_spaces(wrapper.text_content())
 
 @app.route('/search', methods = ['POST'])
 def search():
@@ -70,6 +73,8 @@ def search():
     description, text = html_to_text(html, url)
     print description
     print text
+    if not text:
+        return flask.jsonify([])
     res = requests.post('http://localhost:9200/_search', json.dumps({
         'size': 5,
         'query': {

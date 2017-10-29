@@ -3,36 +3,29 @@
 '''
 Fetch the plaintext of Wikipedia pages.
 
-Given a file with one pageid per line, this script will query the Wikipedia API
-(with the TextExtract extension) and download the plaintext representation of
-those pages.
+Given a Petscan query, this script will query the Wikipedia API
+(with the TextExtract extension), download the plaintext representation of
+those pages and load them into ElasticSearch.
 
 Usage:
-    parse_live.py <pageid-file> <output-dir> [--timeout=<n>]
-
-Options:
-    --timeout=<n>    Maximum time in seconds to run for [default: inf].
+    parse_live.py <petscan_id> <elasticsearch_url>
 '''
 
 from __future__ import unicode_literals
 
-import os
-import sys
-
-import yamwapi as mwapi
-
 import docopt
 import requests
+import yamwapi
 
-import re
+import os
+import sys
 import functools
 import itertools
 import multiprocessing
-import pstats
-import shutil
 import time
 import traceback
 import json
+import mwparserfromhell as mwp
 
 USER_AGENT = 'Similarity (https://tools.wmflabs.org/similarity)'
 WIKIPEDIA_BASE_URL = 'https://en.wikipedia.org'
@@ -41,15 +34,9 @@ WIKIPEDIA_API_URL = WIKIPEDIA_BASE_URL + '/w/api.php'
 
 MAX_EXCEPTIONS_PER_SUBPROCESS = 5
 
-# Thanks, StackOverflow! https://stackoverflow.com/questions/600268
-def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
+SECTIONS_TO_REMOVE = set([
+    'references', 'see also', 'external links', 'footnotes'
+])
 
 def e(s):
     if type(s) == str:
@@ -84,9 +71,9 @@ class State(object):
     pass
 self = State() # Per-process state
 
-def initializer(output_dir):
-    self.output_dir = output_dir
-    self.wiki = mwapi.MediaWikiAPI(WIKIPEDIA_API_URL, USER_AGENT)
+def initializer(elasticsearch_url):
+    self.elasticsearch_url = elasticsearch_url
+    self.wiki = yamwapi.MediaWikiAPI(WIKIPEDIA_API_URL, USER_AGENT)
     self.exception_count = 0
 
 def with_max_exceptions(fn):
@@ -103,48 +90,45 @@ def with_max_exceptions(fn):
     return wrapper
 
 @with_max_exceptions
-def work(output_dir, pageids):
+def work(pageids):
     rows = []
     results = query_pageids(self.wiki, pageids)
-    for pageid, title, wikitext in results:
+    for pageid, title, text in results:
         url = WIKIPEDIA_WIKI_URL + title.replace(' ', '_')
-        with open(os.path.join(self.output_dir, pageid), 'w') as f:
-            json.dump({
+        wdoc = mwp.parse(text)
+        for section in wdoc.get_sections(include_headings = True):
+            try:
+                title = section.get(0).title.strip().lower()
+                if title in SECTIONS_TO_REMOVE:
+                    wdoc.remove(section)
+            except (IndexError, AttributeError):
+                # no heading or empty section?
+                pass
+            esdoc = json.dumps({
                 'pageid': pageid,
                 'url': url,
                 'title': title,
-                'wikitext': wikitext
-            }, f)
+                'text': wdoc.strip_code()
+            })
+            response = requests.put(
+                self.elasticsearch_url + '/' + pageid, esdoc)
+            response.raise_for_status()
 
-def fetch_pages(output_dir, pageids, timeout):
-    mkdir_p(output_dir)
+def fetch_pages(petscan_id, elasticsearch_url):
+    petscan_response = requests.get(
+        'https://petscan.wmflabs.org?format=json&psid=' + petscan_id)
+    pageids = [obj['id'] for obj in petscan_response.json()['*'][0]['a']['*']]
+    print 'loading %d pages...' % len(pageids)
+    chunksz = 32  # how many pageids to query the API at a time
+    tasks = [pageids[i:i + chunksz] for i in range(0, len(pageids), chunksz)]
     pool = multiprocessing.Pool(
-        initializer = initializer, initargs = (output_dir,))
-
-    result = pool.map_async(work, list(pageids))
-    pool.close()
-
-    result.wait(timeout)
-    if not result.ready():
-        print >>sys.stderr, 'timeout, canceling the process pool!'
-        pool.terminate()
-    pool.join()
-    try:
-        result.get()
-        ret = 0
-    except Exception:
-        print >>sys.stderr, 'too many exceptions, failed!'
-        ret = 1
-    return ret
+        initializer = initializer, initargs = (elasticsearch_url,))
+    pool.map(work, tasks)
 
 if __name__ == '__main__':
-    arguments = docopt.docopt(__doc__)
-    pageids_file = arguments['<pageid-file>']
-    output_dir = arguments['<output-dir>']
-    timeout = float(arguments['--timeout'])
     start = time.time()
-    with open(pageids_file) as pf:
-        pageids = set(itertools.imap(str.strip, pf))
-    ret = fetch_pages(output_dir, pageids, timeout)
+    arguments = docopt.docopt(__doc__)
+    ret = fetch_pages(
+            arguments['<petscan_id>'],
+            arguments['<elasticsearch_url>'])
     print 'all done in %d seconds.' % (time.time() - start)
-    sys.exit(ret)
