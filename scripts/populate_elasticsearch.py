@@ -105,8 +105,7 @@ def work(pageids):
         wdoc = mwp.parse(text)
         for section in wdoc.get_sections(include_headings = True):
             try:
-                title = section.get(0).title.strip().lower()
-                if title in SECTIONS_TO_REMOVE:
+                if section.get(0).title.strip().lower() in SECTIONS_TO_REMOVE:
                     wdoc.remove(section)
             except (IndexError, AttributeError):
                 # no heading or empty section?
