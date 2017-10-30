@@ -27,6 +27,7 @@ CSS_SELECTORS_TO_REMOVE = [
 
 import re
 
+# TODO: Should use proper URL parsing and domain check?
 URL_REGEX_TO_SELECTOR = {
     re.compile('theguardian.com/.+'): '*[data-test-id=article-review-body]',
     re.compile('irishtimes.com/.+'): '.article_bodycopy',
@@ -37,6 +38,7 @@ URL_REGEX_TO_SELECTOR = {
     re.compile('economist.com/.+'): 'article',
     re.compile('time.com/.+'): 'article',
     re.compile('bbc.(com|co.uk)/.+'): '.story-body__inner > p, .body-content',
+    re.compile('theatlantic.com/.+'): '.article-body > section',
 }
 
 COLLAPSE_SPACES_REGEX = re.compile(r'\s+')

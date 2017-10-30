@@ -18,6 +18,7 @@ const URL_REGEXS = [
     /rollingstone.com\/.+/i,
     /spiegel.de\/.+/i,
     /time.com\/.+/i,
+    /theatlantic.com\/.+/i,
     /variety.com\/.+/i,
     /washingtonpost.com\/.+/i,
     /wired.com\/.+/i,
