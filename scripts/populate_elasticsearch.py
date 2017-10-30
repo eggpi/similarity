@@ -131,6 +131,20 @@ def fetch_pages(petscan_id, elasticsearch_url):
     pool.map(work, tasks)
 
 if __name__ == '__main__':
+    # TODO: We should actually garbage-collect old data as such:
+    # 1) Create a template that auto-adds a "latest" alias to new indices:
+    #  curl -XPUT localhost:9200/_template/text_extract_template -d
+    #  '{"template": "text_extract_*", "aliases": {"text_extract_latest": {}}}'
+    # Seems to be idempotent.
+    # 2) PUT data to indexes called text_extract_YYYYMMDD-HHMM
+    # 3) Get the current list of indices under the latest alias?
+    #  curl -XGET localhost:9200/_alias/text_extract_latest
+    # 4) Delete old indices:
+    #  curl -XDELETE localhost:9200/text_extract_YYYYMMDD
+    # ALTERNATIVE, probably better: just move the alias atomically.
+    # https://www.elastic.co/guide/en/elasticsearch/guide/current/index-aliases.html
+    # Then don't need to worry about how the search behaves when there
+    # is more than one index under same alias (duplicate results?)
     start = time.time()
     arguments = docopt.docopt(__doc__)
     ret = fetch_pages(
