@@ -29,16 +29,17 @@ import re
 
 # TODO: Should use proper URL parsing and domain check?
 URL_REGEX_TO_SELECTOR = {
-    re.compile('theguardian.com/.+'): '*[data-test-id=article-review-body]',
-    re.compile('irishtimes.com/.+'): '.article_bodycopy',
-    re.compile('npr.org/.+'): '#storytext',
-    re.compile('washingtonpost.com/.+'): 'article',
-    re.compile('nytimes.com/.+'): '#story',
     re.compile('arstechnica.(com|co.uk)/.+'): '.article-content',
-    re.compile('economist.com/.+'): 'article',
-    re.compile('time.com/.+'): 'article',
     re.compile('bbc.(com|co.uk)/.+'): '.story-body__inner > p, .body-content',
+    re.compile('economist.com/.+'): 'article',
+    re.compile('irishtimes.com/.+'): '.article_bodycopy',
+    re.compile('newsweek.com/.+'): '.article-body',
+    re.compile('npr.org/.+'): '#storytext',
+    re.compile('nytimes.com/.+'): '#story',
     re.compile('theatlantic.com/.+'): '.article-body > section',
+    re.compile('theguardian.com/.+'): '*[data-test-id=article-review-body]',
+    re.compile('time.com/.+'): 'article',
+    re.compile('washingtonpost.com/.+'): 'article',
 }
 
 COLLAPSE_SPACES_REGEX = re.compile(r'\s+')

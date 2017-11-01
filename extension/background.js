@@ -13,6 +13,7 @@ const URL_REGEXS = [
     /irishtimes.com\/.+/i,
     /independent.co.uk\/.+/i,
     /npr.org\/.+/i,
+    /newsweek.com\/.+/i,
     /nytimes.com\/.+/i,
     /politico.com\/.+/i,
     /rollingstone.com\/.+/i,
