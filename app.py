@@ -31,13 +31,14 @@ import re
 URL_REGEX_TO_SELECTOR = {
     re.compile('arstechnica.(com|co.uk)/.+'): '.article-content',
     re.compile('bbc.(com|co.uk)/.+'): '.story-body__inner > p, .body-content',
+    re.compile('cnn.com/.+'): '#body-text',
     re.compile('economist.com/.+'): 'article',
     re.compile('irishtimes.com/.+'): '.article_bodycopy',
     re.compile('newsweek.com/.+'): '.article-body',
     re.compile('npr.org/.+'): '#storytext',
     re.compile('nytimes.com/.+'): '#story',
     re.compile('theatlantic.com/.+'): '.article-body > section',
-    re.compile('theguardian.com/.+'): '*[data-test-id=article-review-body]',
+    re.compile('theguardian.com/.+'): '.content__main-column p',
     re.compile('time.com/.+'): 'article',
     re.compile('washingtonpost.com/.+'): 'article',
 }
