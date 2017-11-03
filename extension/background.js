@@ -62,6 +62,8 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
     refreshSuggestionsForTab(tab, (articles) => {
       if (articles.length) {
         chrome.pageAction.show(tab.id);
+      } else {
+        chrome.pageAction.hide(tab.id);
       }
     });
   });
