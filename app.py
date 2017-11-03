@@ -88,7 +88,7 @@ def search():
                     'more_like_this': {
                         'like_text': text,
                         'fields': ['text'],
-                        'max_doc_freq': 1000,
+                        'max_doc_freq': 10000,
                     }
                 },
                 'should': {
