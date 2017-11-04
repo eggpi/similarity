@@ -8,7 +8,10 @@ Given a Petscan query, this script will query the Wikipedia API
 those pages and load them into ElasticSearch.
 
 Usage:
-    parse_live.py <petscan_id> <elasticsearch_url>
+    parse_live.py <petscan_id> <elasticsearch_url> [--auth=<auth_file>]
+
+Options:
+    --auth=<auth_file>   Path to a .ini file HTTP credentials [default: ].
 
 Where <elasticsearch> is of the form https://<host>:<port>/<alias>/<type>.
 This script will ensure the <alias> exists, create an index named
@@ -84,9 +87,9 @@ class State(object):
     pass
 self = State() # Per-process state
 
-def initializer(elasticsearch_url):
+def initializer(elasticsearch_session, elasticsearch_url):
     self.es_url = elasticsearch_url
-    self.es_session = requests.Session()
+    self.es_session = elasticsearch_session
     self.wiki = yamwapi.MediaWikiAPI(WIKIPEDIA_API_URL, USER_AGENT)
     self.exception_count = 0
 
@@ -126,7 +129,7 @@ def work(pageids):
             response = self.es_session.put(self.es_url + '/' + pageid, esdoc)
             response.raise_for_status()
 
-def move_elasticsearch_alias(es_base_url, es_alias, new_index_name):
+def move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name):
     move_req = {'actions': []}
     old_indexes_res = requests.get(es_base_url + '/*/_alias/' + es_alias).json()
     if 'error' not in old_indexes_res:
@@ -141,8 +144,7 @@ def move_elasticsearch_alias(es_base_url, es_alias, new_index_name):
 
     move_req['actions'].append(
         {'add': {'index': new_index_name, 'alias': es_alias}})
-    move_res = requests.post(
-        es_base_url + '/_aliases', json.dumps(move_req))
+    move_res = es_session.post(es_base_url + '/_aliases', json.dumps(move_req))
     move_res.raise_for_status()
     assert 'error' not in move_res.json(), (move_req, move_res)
 
@@ -151,7 +153,7 @@ def build_petscan_url(petscan_id):
     return 'https://petscan.wmflabs.org?format=json&psid=%s&after=%s' % (
         petscan_id, six_months_ago.strftime('%Y%m%d'))
 
-def main(petscan_id, elasticsearch_url):
+def main(petscan_id, elasticsearch_url, auth_file):
     petscan_response = requests.get(build_petscan_url(petscan_id))
     pageids = [obj['id'] for obj in petscan_response.json()['*'][0]['a']['*']]
     print 'loading %d pages...' % len(pageids)
@@ -163,13 +165,25 @@ def main(petscan_id, elasticsearch_url):
     new_index_name = '%s_%s' % (es_alias, date_str)
     new_index_url = '%s/%s/%s' % (es_base_url, new_index_name, es_type)
 
+    auth = None
+    if auth_file:
+        auth_dict = {k.strip(): v.strip(' \n"')
+            for line in file(auth_file).readlines()
+            for k, v in [line.split('=')]}
+        auth = auth_dict['user'], auth_dict['password']
+    es_session = requests.Session()
+    es_session.auth = auth
+
     pool = multiprocessing.Pool(
-        initializer = initializer, initargs = (new_index_url,))
+        initializer = initializer, initargs = (es_session, new_index_url))
     pool.map(work, tasks)
-    move_elasticsearch_alias(es_base_url, es_alias, new_index_name)
+    move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name)
 
 if __name__ == '__main__':
     start = time.time()
     arguments = docopt.docopt(__doc__)
-    ret = main(arguments['<petscan_id>'], arguments['<elasticsearch_url>'])
+    ret = main(
+        arguments['<petscan_id>'],
+        arguments['<elasticsearch_url>'],
+        arguments['--auth'])
     print 'all done in %d seconds.' % (time.time() - start)
