@@ -9,23 +9,28 @@ those pages and load them into ElasticSearch.
 
 Usage:
     parse_live.py <petscan_id> <elasticsearch_url>
+
+Where <elasticsearch> is of the form https://<host>:<port>/<alias>/<type>.
+This script will ensure the <alias> exists, create an index named
+<alias>_<current time> and move the alias to point to it.
 '''
 
 from __future__ import unicode_literals
 
 import docopt
+import mwparserfromhell as mwp
 import requests
 import yamwapi
 
-import os
-import sys
 import functools
 import itertools
+import json
 import multiprocessing
+import os
+import sys
 import time
 import traceback
-import json
-import mwparserfromhell as mwp
+from datetime import datetime
 
 USER_AGENT = 'Similarity (https://tools.wmflabs.org/similarity)'
 WIKIPEDIA_BASE_URL = 'https://en.wikipedia.org'
@@ -43,6 +48,8 @@ SECTIONS_TO_REMOVE = set([
     'references',
     'see also',
 ])
+
+INDEX_DATE_FORMAT = '%Y%m%d%H%M'
 
 def e(s):
     if type(s) == str:
@@ -119,35 +126,43 @@ def work(pageids):
             response = self.es_session.put(self.es_url + '/' + pageid, esdoc)
             response.raise_for_status()
 
-def fetch_pages(petscan_id, elasticsearch_url):
+def move_elasticsearch_alias(es_base_url, es_alias, new_index_name):
+    move_req = {'actions': []}
+    old_indexes_res = requests.get(es_base_url + '/*/_alias/' + es_alias).json()
+    if 'error' not in old_indexes_res:
+        assert len(old_indexes_res) == 1
+        assert '*' not in old_indexes_res, old_indexes_res
+        assert '_all' not in old_indexes_res, old_indexes_res
+        for idx in old_indexes_res:
+            move_req['actions'].append({'remove_index': {'index': idx}})
+
+    move_req['actions'].append(
+        {'add': {'index': new_index_name, 'alias': es_alias}})
+    move_res = requests.post(
+        es_base_url + '/_aliases', json.dumps(move_req))
+    move_res.raise_for_status()
+    assert 'error' not in move_res.json(), (move_req, move_res)
+
+def main(petscan_id, elasticsearch_url):
     petscan_response = requests.get(
         'https://petscan.wmflabs.org?format=json&psid=' + petscan_id)
     pageids = [obj['id'] for obj in petscan_response.json()['*'][0]['a']['*']]
     print 'loading %d pages...' % len(pageids)
     chunksz = 32  # how many pageids to query the API at a time
     tasks = [pageids[i:i + chunksz] for i in range(0, len(pageids), chunksz)]
+
+    es_base_url, es_alias, es_type = elasticsearch_url.rsplit('/', 2)
+    date_str = datetime.now().strftime(INDEX_DATE_FORMAT)
+    new_index_name = '%s_%s' % (es_alias, date_str)
+    new_index_url = '%s/%s/%s' % (es_base_url, new_index_name, es_type)
+
     pool = multiprocessing.Pool(
-        initializer = initializer, initargs = (elasticsearch_url,))
+        initializer = initializer, initargs = (new_index_url,))
     pool.map(work, tasks)
+    move_elasticsearch_alias(es_base_url, es_alias, new_index_name)
 
 if __name__ == '__main__':
-    # TODO: We should actually garbage-collect old data as such:
-    # 1) Create a template that auto-adds a "latest" alias to new indices:
-    #  curl -XPUT localhost:9200/_template/text_extract_template -d
-    #  '{"template": "text_extract_*", "aliases": {"text_extract_latest": {}}}'
-    # Seems to be idempotent.
-    # 2) PUT data to indexes called text_extract_YYYYMMDD-HHMM
-    # 3) Get the current list of indices under the latest alias?
-    #  curl -XGET localhost:9200/_alias/text_extract_latest
-    # 4) Delete old indices:
-    #  curl -XDELETE localhost:9200/text_extract_YYYYMMDD
-    # ALTERNATIVE, probably better: just move the alias atomically.
-    # https://www.elastic.co/guide/en/elasticsearch/guide/current/index-aliases.html
-    # Then don't need to worry about how the search behaves when there
-    # is more than one index under same alias (duplicate results?)
     start = time.time()
     arguments = docopt.docopt(__doc__)
-    ret = fetch_pages(
-            arguments['<petscan_id>'],
-            arguments['<elasticsearch_url>'])
+    ret = main(arguments['<petscan_id>'], arguments['<elasticsearch_url>'])
     print 'all done in %d seconds.' % (time.time() - start)
