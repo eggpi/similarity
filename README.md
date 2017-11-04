@@ -1,7 +1,3 @@
 # similarity
 
-## Installation
-
-```
-python -m nltk.downloader 'punkt'
-```
+write something nice here.
