@@ -80,7 +80,7 @@ def search():
     print text
     if not text:
         return flask.jsonify([])
-    res = requests.post('http://localhost:9200/_search', json.dumps({
+    res = requests.post('http://localhost:9200/text_extract/_search', json.dumps({
         'size': 10,
         'min_score': 20,
         'query': {
