@@ -130,10 +130,13 @@ def move_elasticsearch_alias(es_base_url, es_alias, new_index_name):
     move_req = {'actions': []}
     old_indexes_res = requests.get(es_base_url + '/*/_alias/' + es_alias).json()
     if 'error' not in old_indexes_res:
+        # Do a few sanity checks since we share an ES cluster with other users,
+        # and we *really* don't want to drop other people's data!
         assert len(old_indexes_res) == 1
         assert '*' not in old_indexes_res, old_indexes_res
         assert '_all' not in old_indexes_res, old_indexes_res
         for idx in old_indexes_res:
+            assert idx.startswith(es_alias)
             move_req['actions'].append({'remove_index': {'index': idx}})
 
     move_req['actions'].append(
