@@ -30,7 +30,7 @@ import os
 import sys
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 
 USER_AGENT = 'Similarity (https://tools.wmflabs.org/similarity)'
 WIKIPEDIA_BASE_URL = 'https://en.wikipedia.org'
@@ -146,9 +146,13 @@ def move_elasticsearch_alias(es_base_url, es_alias, new_index_name):
     move_res.raise_for_status()
     assert 'error' not in move_res.json(), (move_req, move_res)
 
+def build_petscan_url(petscan_id):
+    six_months_ago = datetime.now() - timedelta(days = 6 * 30)
+    return 'https://petscan.wmflabs.org?format=json&psid=%s&after=%s' % (
+        petscan_id, six_months_ago.strftime('%Y%m%d'))
+
 def main(petscan_id, elasticsearch_url):
-    petscan_response = requests.get(
-        'https://petscan.wmflabs.org?format=json&psid=' + petscan_id)
+    petscan_response = requests.get(build_petscan_url(petscan_id))
     pageids = [obj['id'] for obj in petscan_response.json()['*'][0]['a']['*']]
     print 'loading %d pages...' % len(pageids)
     chunksz = 32  # how many pageids to query the API at a time
