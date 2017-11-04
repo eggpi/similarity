@@ -23,6 +23,7 @@ const URL_REGEXS = [
     /variety.com\/.+/i,
     /washingtonpost.com\/.+/i,
     /wired.com\/.+/i,
+    /wsj.com\/.+/i,
 ]
 
 const SIMILARITY_URL = 'http://localhost:5000/search';

@@ -41,6 +41,7 @@ URL_REGEX_TO_SELECTOR = {
     re.compile('theguardian.com/.+'): '.content__main-column p',
     re.compile('time.com/.+'): 'article',
     re.compile('washingtonpost.com/.+'): 'article',
+    re.compile('wsj.com/.+'): '#wsj-article-wrap p',
 }
 
 COLLAPSE_SPACES_REGEX = re.compile(r'\s+')
