@@ -36,7 +36,7 @@ URL_REGEX_TO_SELECTOR = {
     re.compile('irishtimes.com/.+'): '.article_bodycopy',
     re.compile('newsweek.com/.+'): '.article-body',
     re.compile('npr.org/.+'): '#storytext',
-    re.compile('nytimes.com/.+'): '#story-header, .story-body',
+    re.compile('nytimes.com/.+'): '#story-header, .story-body, #story > p',
     re.compile('theatlantic.com/.+'): '.article-body > section',
     re.compile('theguardian.com/.+'): '.content__main-column p',
     re.compile('time.com/.+'): 'article',
