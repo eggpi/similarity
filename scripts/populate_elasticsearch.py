@@ -8,10 +8,13 @@ Given a Petscan query, this script will query the Wikipedia API
 those pages and load them into ElasticSearch.
 
 Usage:
-    parse_live.py <petscan_id> <elasticsearch_url> [--auth=<auth_file>]
+    parse_live.py <petscan_id> <elasticsearch_url>
+        [--auth=<auth_file>]
+        [--max_es_qps=<n>]
 
 Options:
-    --auth=<auth_file>   Path to a .ini file HTTP credentials [default: ].
+    --auth=<auth_file>  Path to a .ini file HTTP credentials [default: ].
+    --max_es_qps=<n>    How many documents to PUT per second [default: 24].
 
 Where <elasticsearch> is of the form https://<host>:<port>/<alias>/<type>.
 This script will ensure the <alias> exists, create an index named
@@ -87,9 +90,11 @@ class State(object):
     pass
 self = State() # Per-process state
 
-def initializer(elasticsearch_session, elasticsearch_url):
-    self.es_url = elasticsearch_url
-    self.es_session = elasticsearch_session
+def initializer(es_session, es_url, es_max_qps):
+    self.es_url = es_url
+    self.es_session = es_session
+    self.es_next_request_time = datetime.now()
+    self.es_max_qps = es_max_qps
     self.wiki = yamwapi.MediaWikiAPI(WIKIPEDIA_API_URL, USER_AGENT)
     self.exception_count = 0
 
@@ -120,14 +125,19 @@ def work(pageids):
             except (IndexError, AttributeError):
                 # no heading or empty section?
                 pass
-            esdoc = json.dumps({
-                'pageid': pageid,
-                'url': url,
-                'title': title,
-                'text': wdoc.strip_code()
-            })
-            response = self.es_session.put(self.es_url + '/' + pageid, esdoc)
-            response.raise_for_status()
+        esdoc = json.dumps({
+            'pageid': pageid,
+            'url': url,
+            'title': title,
+            'text': wdoc.strip_code()
+        })
+        time.sleep(max(
+            0, (self.es_next_request_time - datetime.now()).total_seconds()))
+        self.es_next_request_time = datetime.now() + timedelta(
+            seconds = 1.0 / self.es_max_qps)
+        # TODO Write the full batch using the bulk API in ES
+        response = self.es_session.put(self.es_url + '/' + pageid, esdoc)
+        response.raise_for_status()
 
 def move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name):
     move_req = {'actions': []}
@@ -153,10 +163,9 @@ def build_petscan_url(petscan_id):
     return 'https://petscan.wmflabs.org?format=json&psid=%s&after=%s' % (
         petscan_id, four_months_ago.strftime('%Y%m%d'))
 
-def main(petscan_id, elasticsearch_url, auth_file):
+def main(petscan_id, elasticsearch_url, auth_file, max_es_qps):
     petscan_response = requests.get(build_petscan_url(petscan_id))
     pageids = [obj['id'] for obj in petscan_response.json()['*'][0]['a']['*']]
-    print 'loading %d pages...' % len(pageids)
     chunksz = 32  # how many pageids to query the API at a time
     tasks = [pageids[i:i + chunksz] for i in range(0, len(pageids), chunksz)]
 
@@ -174,8 +183,11 @@ def main(petscan_id, elasticsearch_url, auth_file):
     es_session = requests.Session()
     es_session.auth = auth
 
+    max_qps = float(max_es_qps) / multiprocessing.cpu_count()
+    assert max_qps > 0
     pool = multiprocessing.Pool(
-        initializer = initializer, initargs = (es_session, new_index_url))
+        initializer = initializer,
+        initargs = (es_session, new_index_url, max_qps))
     pool.map(work, tasks)
     move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name)
 
@@ -185,5 +197,6 @@ if __name__ == '__main__':
     ret = main(
         arguments['<petscan_id>'],
         arguments['<elasticsearch_url>'],
-        arguments['--auth'])
+        arguments['--auth'],
+        int(arguments['--max_es_qps']))
     print 'all done in %d seconds.' % (time.time() - start)
