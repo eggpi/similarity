@@ -149,9 +149,9 @@ def move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name):
     assert 'error' not in move_res.json(), (move_req, move_res)
 
 def build_petscan_url(petscan_id):
-    six_months_ago = datetime.now() - timedelta(days = 6 * 30)
+    four_months_ago = datetime.now() - timedelta(days = 4 * 30)
     return 'https://petscan.wmflabs.org?format=json&psid=%s&after=%s' % (
-        petscan_id, six_months_ago.strftime('%Y%m%d'))
+        petscan_id, four_months_ago.strftime('%Y%m%d'))
 
 def main(petscan_id, elasticsearch_url, auth_file):
     petscan_response = requests.get(build_petscan_url(petscan_id))
