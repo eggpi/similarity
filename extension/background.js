@@ -32,7 +32,7 @@ function getDocumentContents(callback) {
   let script = 'document.documentElement.outerHTML';
   chrome.tabs.executeScript({
     code: script
-  }, (result) => { callback(result); });
+  }, (result) => { callback(result[0]); });
 }
 
 function fetchSimilarArticles(html, url, callback) {
