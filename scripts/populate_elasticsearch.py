@@ -8,7 +8,7 @@ Given a Petscan query, this script will query the Wikipedia API
 those pages and load them into ElasticSearch.
 
 Usage:
-    parse_live.py <petscan_id> <elasticsearch_url>
+    populate_elasticsearch.py <petscan_id> <elasticsearch_url>
         [--auth=<auth_file>]
         [--max_es_qps=<n>]
 
