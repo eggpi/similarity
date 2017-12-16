@@ -164,27 +164,27 @@ def build_petscan_url(petscan_id):
         petscan_id, four_months_ago.strftime('%Y%m%d'))
 
 def main(petscan_id, elasticsearch_url, auth_file, max_es_qps):
-    petscan_response = requests.get(build_petscan_url(petscan_id))
-    pageids = [obj['id'] for obj in petscan_response.json()['*'][0]['a']['*']]
-    chunksz = 32  # how many pageids to query the API at a time
-    tasks = [pageids[i:i + chunksz] for i in range(0, len(pageids), chunksz)]
+    auth = None
+    if auth_file:
+        auth_dict = {k.strip(): v.strip(' \n"')
+            for line in file(auth_file).readlines()
+            for k, v in [line.split('=', 1)]}
+        auth = auth_dict['user'], auth_dict['password']
+    es_session = requests.Session()
+    es_session.auth = auth
 
     es_base_url, es_alias, es_type = elasticsearch_url.rsplit('/', 2)
     date_str = datetime.now().strftime(INDEX_DATE_FORMAT)
     new_index_name = '%s_%s' % (es_alias, date_str)
     new_index_url = '%s/%s/%s' % (es_base_url, new_index_name, es_type)
 
+    petscan_response = requests.get(build_petscan_url(petscan_id))
+    pageids = [obj['id'] for obj in petscan_response.json()['*'][0]['a']['*']]
+    chunksz = 32  # how many pageids to query the API at a time
+    tasks = [pageids[i:i + chunksz] for i in range(0, len(pageids), chunksz)]
+
     print 'populating elasticsearch alias %s, type %s with %d pages' % (
         es_alias, es_type, len(pageids))
-
-    auth = None
-    if auth_file:
-        auth_dict = {k.strip(): v.strip(' \n"')
-            for line in file(auth_file).readlines()
-            for k, v in line.split('=', 1)}
-        auth = auth_dict['user'], auth_dict['password']
-    es_session = requests.Session()
-    es_session.auth = auth
 
     max_qps = float(max_es_qps) / multiprocessing.cpu_count()
     assert max_qps > 0
