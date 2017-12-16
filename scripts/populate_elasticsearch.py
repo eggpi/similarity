@@ -145,7 +145,7 @@ def move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name):
     if 'error' not in old_indexes_res:
         # Do a few sanity checks since we share an ES cluster with other users,
         # and we *really* don't want to drop other people's data!
-        assert len(old_indexes_res) == 1
+        assert len(old_indexes_res) <= 1
         assert '*' not in old_indexes_res, old_indexes_res
         assert '_all' not in old_indexes_res, old_indexes_res
         for idx in old_indexes_res:
