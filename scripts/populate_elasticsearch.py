@@ -178,7 +178,7 @@ def main(petscan_id, elasticsearch_url, auth_file, max_es_qps):
     if auth_file:
         auth_dict = {k.strip(): v.strip(' \n"')
             for line in file(auth_file).readlines()
-            for k, v in [line.split('=')]}
+            for k, v in line.split('=', 1)}
         auth = auth_dict['user'], auth_dict['password']
     es_session = requests.Session()
     es_session.auth = auth
