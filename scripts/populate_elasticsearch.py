@@ -174,6 +174,9 @@ def main(petscan_id, elasticsearch_url, auth_file, max_es_qps):
     new_index_name = '%s_%s' % (es_alias, date_str)
     new_index_url = '%s/%s/%s' % (es_base_url, new_index_name, es_type)
 
+    print 'populating elasticsearch alias %s, type %s with %d pages' % (
+        es_alias, es_type, len(pageids))
+
     auth = None
     if auth_file:
         auth_dict = {k.strip(): v.strip(' \n"')
