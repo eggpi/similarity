@@ -14,6 +14,13 @@ app.config['JSON_AS_ASCII'] = False
 
 ELASTICSEARCH_SEARCH_URL = (
     'http://tools-elastic-01.tools.eqiad.wmflabs:80/similarity/_search')
+ELASTICSEARCH_AUTH_FILE = (
+    '/data/project/similarity/.elasticsearch.ini')
+
+auth_dict = {k.strip(): v.strip(' \n"')
+    for line in file(ELASTICSEARCH_AUTH_FILE).readlines()
+    for k, v in [line.split('=', 1)]}
+app.elasticsearch_auth = (auth_dict['user'], auth_dict['password'])
 
 CSS_SELECTORS_TO_REMOVE = [
     '.hidden',
@@ -75,6 +82,7 @@ def page_html_to_text(html, url=None):
 
 @app.route('/search', methods = ['POST'])
 def search():
+
     if 'html' not in flask.request.form or not flask.request.form['html']:
         return ('POST some data with a "html" form key\n', 400, '')
     html = flask.request.form['html']
@@ -104,7 +112,7 @@ def search():
                 }
             }
         }
-    })).json()
+    }), auth = app.elasticsearch_auth).json()
     return flask.jsonify([{
         'title': h['_source']['title'],
         'url': h['_source']['url'],
