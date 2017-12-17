@@ -12,6 +12,9 @@ app = flask.Flask(__name__,
     template_folder = os.path.join('server', 'templates'))
 app.config['JSON_AS_ASCII'] = False
 
+ELASTICSEARCH_SEARCH_URL = (
+    'http://tools-elastic-01.tools.eqiad.wmflabs:80/similarity/_search')
+
 CSS_SELECTORS_TO_REMOVE = [
     '.hidden',
     '.robots-nocontent',
@@ -81,7 +84,7 @@ def search():
     print text
     if not text:
         return flask.jsonify([])
-    res = requests.post('http://localhost:9200/text_extract/_search', json.dumps({
+    res = requests.post(ELASTICSEARCH_SEARCH_URL, json.dumps({
         'size': 10,
         'min_score': 20,
         'query': {
