@@ -26,7 +26,7 @@ const URL_REGEXS = [
     /wsj.com\/.+/i,
 ]
 
-const SIMILARITY_URL = 'http://localhost:5000/search';
+const SIMILARITY_URL = 'https://tools.wmflabs.org/similarity/search';
 
 function getDocumentContents(callback) {
   let script = 'document.documentElement.outerHTML';
