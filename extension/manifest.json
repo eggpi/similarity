@@ -3,7 +3,7 @@
 
     "name": "Wikipedia Needs References",
     "description": "Wikipedia Needs References extension tells you when a page you are viewing looks like it could be a good reference to a Wikipedia article. You can then follow a link to the specific article and edit it to improve its quality!",
-    "version": "0.1",
+    "version": "0.0.1",
 
     "page_action": {
         "default_icon": "icon.png",
