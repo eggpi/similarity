@@ -16,11 +16,12 @@ ELASTICSEARCH_SEARCH_URL = (
     'http://tools-elastic-01.tools.eqiad.wmflabs:80/similarity/_search')
 ELASTICSEARCH_AUTH_FILE = (
     '/data/project/similarity/.elasticsearch.ini')
-
-auth_dict = {k.strip(): v.strip(' \n"')
-    for line in file(ELASTICSEARCH_AUTH_FILE).readlines()
-    for k, v in [line.split('=', 1)]}
-app.elasticsearch_auth = (auth_dict['user'], auth_dict['password'])
+app.elasticsearch_auth = None
+if os.path.isfile(ELASTICSEARCH_AUTH_FILE):
+    auth_dict = {k.strip(): v.strip(' \n"')
+        for line in file(ELASTICSEARCH_AUTH_FILE).readlines()
+        for k, v in [line.split('=', 1)]}
+    app.elasticsearch_auth = (auth_dict['user'], auth_dict['password'])
 
 CSS_SELECTORS_TO_REMOVE = [
     '.hidden',
