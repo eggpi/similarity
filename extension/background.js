@@ -103,6 +103,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  chrome.pageAction.hide(tab.id);
   if (changeInfo.status == 'complete') {
     getSuggestionsForTab(tab, (articles) => {
       if (articles.length) {
@@ -110,7 +111,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       }
     });
   }
-  chrome.pageAction.hide(tab.id);
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
