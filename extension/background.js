@@ -28,6 +28,29 @@ const URL_REGEXS = [
 
 const SIMILARITY_URL = 'https://tools.wmflabs.org/similarity/search';
 
+let SuggestionsCache = new (function() {
+  const MAX_CACHE_SIZE = 10;
+
+  let cache = [];
+
+  this.get = key => {
+    for (let i = 0; i < cache.length; i++) {
+      let entry = cache[i];
+      if (entry.key === key) {
+        return entry.value;
+      }
+    }
+    return undefined;
+  };
+
+  this.set = (key, value) => {
+    if (cache.length == MAX_CACHE_SIZE) {
+      cache.shift();
+    }
+    cache.push({key: key, value: value});
+  };
+});
+
 function getDocumentContents(callback) {
   let script = 'document.documentElement.outerHTML';
   chrome.tabs.executeScript({
@@ -44,8 +67,14 @@ function fetchSimilarArticles(html, url, callback) {
     (response) => { return response.json(); }).then(callback);
 }
 
-function refreshSuggestionsForTab(tab, callback) {
+function getSuggestionsForTab(tab, callback) {
   if (!tab.url) return;
+  let cached = SuggestionsCache.get(tab.url);
+  if (cached) {
+    callback(cached);
+    return;
+  }
+
   let match = false;
   for (let i = 0; i < URL_REGEXS.length; i++) {
     if (tab.url.match(URL_REGEXS[i])) {
@@ -54,13 +83,16 @@ function refreshSuggestionsForTab(tab, callback) {
   }
   if (!match) return;
   getDocumentContents((html) => {
-    fetchSimilarArticles(html, tab.url, callback);
+    fetchSimilarArticles(html, tab.url, suggestions => {
+      SuggestionsCache.set(tab.url, suggestions);
+      callback(suggestions);
+    });
   });
 }
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
-    refreshSuggestionsForTab(tab, (articles) => {
+    getSuggestionsForTab(tab, (articles) => {
       if (articles.length) {
         chrome.pageAction.show(tab.id);
       } else {
@@ -72,7 +104,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status == 'complete') {
-    refreshSuggestionsForTab(tab, (articles) => {
+    getSuggestionsForTab(tab, (articles) => {
       if (articles.length) {
         chrome.pageAction.show(tab.id);
       }
@@ -83,8 +115,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-    // TODO this should reuse the response we got before?
-    refreshSuggestionsForTab(tabs[0], sendResponse);
+    getSuggestionsForTab(tabs[0], sendResponse);
   });
   return true;
 });
