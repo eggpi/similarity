@@ -80,8 +80,9 @@ def search():
     html = flask.request.form['html']
     url = flask.request.form.get('url', None)
     description, text = page_html_to_text(html, url)
-    print description
-    print text
+
+    # TODO Log the url (or even text?), and search results
+
     if not text:
         return flask.jsonify([])
     res = requests.post(ELASTICSEARCH_SEARCH_URL, json.dumps({
