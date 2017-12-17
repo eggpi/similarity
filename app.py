@@ -108,7 +108,7 @@ def search():
                 },
                 'should': {
                     'match': {
-                        'wikitext': description,
+                        'text': description,
                     }
                 }
             }
