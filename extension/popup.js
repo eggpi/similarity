@@ -8,8 +8,8 @@ function renderPopUp(articles) {
     a.target = '_blank';
     a.textContent = articles[i].title;
     li.appendChild(a);
-    li.appendChild(document.createTextNode(
-      ' (' + articles[i].similarity + ')'));
+    // li.appendChild(document.createTextNode(
+    //  ' (' + articles[i].similarity + ')'));
     container.firstChild.appendChild(li);
   }
 }
