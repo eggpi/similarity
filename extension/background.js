@@ -67,12 +67,14 @@ function fetchSimilarArticles(html, url, callback) {
     (response) => { return response.json(); }).then(callback);
 }
 
-function getSuggestionsForTab(tab, callback) {
+function getSuggestionsForTab(tab, callback, options) {
   if (!tab.url) return;
-  let cached = SuggestionsCache.get(tab.url);
-  if (cached) {
-    callback(cached);
-    return;
+  if (!options || options.canUseCache) {
+    let cached = SuggestionsCache.get(tab.url);
+    if (cached) {
+      callback(cached);
+      return;
+    }
   }
 
   let match = false;
@@ -109,7 +111,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (articles.length) {
         chrome.pageAction.show(tab.id);
       }
-    });
+    }, {canUseCache: false});
   }
 });
 
