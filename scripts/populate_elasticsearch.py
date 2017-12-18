@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 Fetch the plaintext of Wikipedia pages.
@@ -20,8 +20,6 @@ Where <elasticsearch> is of the form https://<host>:<port>/<alias>/<type>.
 This script will ensure the <alias> exists, create an index named
 <alias>_<current time> and move the alias to point to it.
 '''
-
-from __future__ import unicode_literals
 
 import docopt
 import mwparserfromhell as mwp
@@ -183,8 +181,8 @@ def main(petscan_id, elasticsearch_url, auth_file, max_es_qps):
     chunksz = 32  # how many pageids to query the API at a time
     tasks = [pageids[i:i + chunksz] for i in range(0, len(pageids), chunksz)]
 
-    print 'populating elasticsearch alias %s, type %s with %d pages' % (
-        es_alias, es_type, len(pageids))
+    print('populating elasticsearch alias %s, type %s with %d pages' % (
+        es_alias, es_type, len(pageids)))
 
     max_qps = float(max_es_qps) / multiprocessing.cpu_count()
     assert max_qps > 0
@@ -202,4 +200,4 @@ if __name__ == '__main__':
         arguments['<elasticsearch_url>'],
         arguments['--auth'],
         int(arguments['--max_es_qps']))
-    print 'all done in %d seconds.' % (time.time() - start)
+    print('all done in %d seconds.' % (time.time() - start))

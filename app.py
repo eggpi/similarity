@@ -1,12 +1,10 @@
-from server import lxml_utils
-
 import flask
-import lxml.html
 import requests
+import newspaper
 
 import json
 import os
-import cStringIO as StringIO
+import re
 
 app = flask.Flask(__name__,
     template_folder = os.path.join('server', 'templates'))
@@ -19,75 +17,29 @@ ELASTICSEARCH_AUTH_FILE = (
 app.elasticsearch_auth = None
 if os.path.isfile(ELASTICSEARCH_AUTH_FILE):
     auth_dict = {k.strip(): v.strip(' \n"')
-        for line in file(ELASTICSEARCH_AUTH_FILE).readlines()
+        for line in open(ELASTICSEARCH_AUTH_FILE).readlines()
         for k, v in [line.split('=', 1)]}
     app.elasticsearch_auth = (auth_dict['user'], auth_dict['password'])
-
-CSS_SELECTORS_TO_REMOVE = [
-    '.hidden',
-    '.robots-nocontent',
-    'footer',
-    'header',
-    'link',
-    'nav',
-    'noindex',
-    'script',
-    'style',
-    'img',
-]
-
-import re
-
-# TODO: Should use proper URL parsing and domain check?
-URL_REGEX_TO_SELECTOR = {
-    re.compile('arstechnica.(com|co.uk)/.+'): '.article-content',
-    re.compile('bbc.(com|co.uk)/.+'): '.story-body__inner > p, .body-content',
-    re.compile('cnn.com/.+'): '#body-text',
-    re.compile('economist.com/.+'): 'article',
-    re.compile('irishtimes.com/.+'): '.article_bodycopy',
-    re.compile('newsweek.com/.+'): '.article-body',
-    re.compile('npr.org/.+'): '#storytext',
-    re.compile('nytimes.com/.+'): '#story-header, .story-body, #story p',
-    re.compile('theatlantic.com/.+'): '.article-body > section',
-    re.compile('theguardian.com/.+'): '.content__main-column p',
-    re.compile('time.com/.+'): 'article',
-    re.compile('washingtonpost.com/.+'): 'article',
-    re.compile('wsj.com/.+'): '#wsj-article-wrap p',
-    re.compile('wired.com/.+'): 'article.article-body-component',
-}
 
 COLLAPSE_SPACES_REGEX = re.compile(r'\s+')
 
 def collapse_spaces(text):
     return COLLAPSE_SPACES_REGEX.sub(' ', text)
 
-def page_html_to_text(html, url=None):
-    assert isinstance(html, unicode)
-    tree = lxml.html.parse(
-        StringIO.StringIO(html.encode('utf-8')),
-        parser = lxml.html.HTMLParser(
-            encoding = 'utf-8', remove_comments = True)).getroot()
-    description = ' '.join(
-        tag.get('content')
-        for tag in tree.cssselect('meta[name="description"]'))
-    for s in CSS_SELECTORS_TO_REMOVE:
-        for e in tree.cssselect(s):
-            lxml_utils.remove_element(e)
-    wrapper = lxml.html.Element('div')
-    if url:
-        for r, s in URL_REGEX_TO_SELECTOR.items():
-            if r.search(url):
-                wrapper.extend(tree.cssselect(s))
-                break
-    return collapse_spaces(description), collapse_spaces(wrapper.text_content())
+def page_html_to_text(html, url):
+    article = newspaper.Article(url = url)
+    article.set_html(html)
+    article.parse()
+    description = article.meta_description
+    text = article.text
+    return collapse_spaces(description), collapse_spaces(text)
 
 @app.route('/search', methods = ['POST'])
 def search():
-
     if 'html' not in flask.request.form or not flask.request.form['html']:
         return ('POST some data with a "html" form key\n', 400, '')
     html = flask.request.form['html']
-    url = flask.request.form.get('url', None)
+    url = flask.request.form.get('url', '')
     description, text = page_html_to_text(html, url)
 
     # TODO Log the url (or even text?), and search results
