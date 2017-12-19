@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Wikipedia Needs References Options</title>
+    <style>
+      #domains-whitelist {
+        height: 200px;
+        overflow-y: scroll;
+        margin: 20px 0;
+        padding: 0 5px;
+      }
+      #domains-whitelist .remove {
+        width: 12px;
+        height: 12px;
+        margin-right: 10px;
+        border: none;
+      }
+      #domains-whitelist .entry {
+        font-size: 15px;
+        margin: 5px 0;
+      }
+      #add-regexp {
+        margin: 10px 0;
+      }
+      #reset-whitelist {
+        margin: 0;
+        height: 25px;
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <h1>URLs whitelist</h1>
+      <p>These are the regular expressions used to select which pages the extension will be activated for:</p>
+      <fieldset id="domains-whitelist"></fieldset>
+      <p>Use the form below to add an entry to the whitelist:</p>
+      <form id="add-regexp">
+        <input id="add-regexp-input" name="regexp" type="text" placeholder="example.com/.+" required autocomplete="off"></input>
+        <input type="submit" value="Add!"/>
+      </form>
+      <p>Note: This extension is optimized for news websites and may not return good results on user-added URLs.</p>
+      <button id="reset-whitelist">Reset default whitelist</button>
+    </section>
+  <script src="options.js"></script>
+  <script src="options-ui.js"></script>
+  </body>
+</html>

@@ -1,31 +1,3 @@
-const URL_REGEXS = [
-    /abcnews.go.com\/.+/i,
-    /arstechnica.com\/.+/i,
-    /bbc.co.uk\/.+/i,
-    /bbc.com\/.+/i,
-    /business-standard.com\/.+/i,
-    /cnn.com\/.+/i,
-    /economist.com\/.+/i,
-    /guardian.co.uk\/.+/i,
-    /theguardian.com\/.+/i,
-    /hollywoodreporter.com\/.+/i,
-    /huffingtonpost.com\/.+/i,
-    /irishtimes.com\/.+/i,
-    /independent.co.uk\/.+/i,
-    /npr.org\/.+/i,
-    /newsweek.com\/.+/i,
-    /nytimes.com\/.+/i,
-    /politico.com\/.+/i,
-    /rollingstone.com\/.+/i,
-    /spiegel.de\/.+/i,
-    /time.com\/.+/i,
-    /theatlantic.com\/.+/i,
-    /variety.com\/.+/i,
-    /washingtonpost.com\/.+/i,
-    /wired.com\/.+/i,
-    /wsj.com\/.+/i,
-]
-
 const SIMILARITY_URL = 'https://tools.wmflabs.org/similarity/search';
 
 let SuggestionsCache = new (function() {
@@ -69,6 +41,16 @@ function fetchSimilarArticles(html, url, callback) {
 
 function getSuggestionsForTab(tab, callback, options) {
   if (!tab.url) return;
+  let whitelist = loadURLsWhitelist();
+
+  let match = whitelist.some((w) => {
+    return tab.url.match(RegExp(w));
+  });
+  if (!match) {
+    callback([]);
+    return;
+  };
+
   if (!options || options.canUseCache) {
     let cached = SuggestionsCache.get(tab.url);
     if (cached) {
@@ -76,14 +58,6 @@ function getSuggestionsForTab(tab, callback, options) {
       return;
     }
   }
-
-  let match = false;
-  for (let i = 0; i < URL_REGEXS.length; i++) {
-    if (tab.url.match(URL_REGEXS[i])) {
-      match = true;
-    }
-  }
-  if (!match) return;
   getDocumentContents((html) => {
     fetchSimilarArticles(html, tab.url, suggestions => {
       SuggestionsCache.set(tab.url, suggestions);

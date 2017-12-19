@@ -12,6 +12,14 @@ function renderPopUp(articles) {
     //  ' (' + articles[i].similarity + ')'));
     container.firstChild.appendChild(li);
   }
+
+  let options = document.createElement('a');
+  options.classList.add('options');
+  options.style.backgroundImage = 'url(' + chrome.extension.getURL('icons/options.svg') + ')';
+  options.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage()
+  });
+  document.body.appendChild(options);
 }
 
 chrome.runtime.sendMessage({}, (articles) => {
