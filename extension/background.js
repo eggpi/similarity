@@ -105,11 +105,15 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  chrome.pageAction.hide(tab.id);
+  // Note: this event can happen multiple times, even after the page loads,
+  // and changeInfo.status can even be undefined (despite being documented
+  // as only ever being either 'loading' or 'complete').
   if (changeInfo.status == 'complete') {
     getSuggestionsForTab(tab, (articles) => {
       if (articles.length) {
         chrome.pageAction.show(tab.id);
+      } else {
+        chrome.pageAction.hide(tab.id);
       }
     }, {canUseCache: false});
   }
