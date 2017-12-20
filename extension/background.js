@@ -2,10 +2,18 @@ const SIMILARITY_URL = 'https://tools.wmflabs.org/similarity/search';
 
 let SuggestionsCache = new (function() {
   const MAX_CACHE_SIZE = 10;
+  const ENTRY_TTL_S = 10 * 60;
 
   let cache = [];
 
+  function expire() {
+    cache = cache.filter((entry) => {
+      return ((new Date() - entry.date) / 1000) < ENTRY_TTL_S;
+    });
+  }
+
   this.get = key => {
+    expire();
     for (let i = 0; i < cache.length; i++) {
       let entry = cache[i];
       if (entry.key === key) {
@@ -16,10 +24,11 @@ let SuggestionsCache = new (function() {
   };
 
   this.set = (key, value) => {
+    expire();
     if (cache.length == MAX_CACHE_SIZE) {
       cache.shift();
     }
-    cache.push({key: key, value: value});
+    cache.push({key: key, value: value, date: new Date()});
   };
 });
 
