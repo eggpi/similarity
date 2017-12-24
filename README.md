@@ -20,9 +20,10 @@ $ virtualenv -p python3 www/python/venv
 $ . www/python/venv/bin/activate
 $ pip install --upgrade pip
 $ pip install -r similarity/requirements.txt
+$ deactivate
 ```
 
-It may be necessary to run that last command more than once until it actually works ¯\_(ツ)_/¯
+It may be necessary to run that last command more than once until it actually works ¯\\_(ツ)_/¯
 
 Install the crontab:
 
