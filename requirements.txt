@@ -5,3 +5,6 @@ mwparserfromhell==0.5
 requests==2.18.4
 yamwapi==0.2
 newspaper3k==0.2.5
+# Pillow is a dependence of newspaper3k, not ours, but --disable-jpeg is
+# required on Toolforge so we list it here to pass that option.
+Pillow>=0.3.0 --global-option="build_ext" --global-option="--disable-jpeg"
