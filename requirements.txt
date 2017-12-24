@@ -3,7 +3,7 @@ Flask==0.12.2
 lxml==4.0.0
 mwparserfromhell==0.5
 requests==2.18.4
-yamwapi==0.2
+mwapi==0.5.0
 newspaper3k==0.2.5
 # Pillow is a dependence of newspaper3k, not ours, but --disable-jpeg is
 # required on Toolforge so we list it here to pass that option.

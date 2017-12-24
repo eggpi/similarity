@@ -22,9 +22,9 @@ This script will ensure the <alias> exists, create an index named
 '''
 
 import docopt
+import mwapi
 import mwparserfromhell as mwp
 import requests
-import yamwapi
 
 import functools
 import itertools
@@ -39,7 +39,6 @@ from datetime import datetime, timedelta
 USER_AGENT = 'Similarity (https://tools.wmflabs.org/similarity)'
 WIKIPEDIA_BASE_URL = 'https://en.wikipedia.org'
 WIKIPEDIA_WIKI_URL = WIKIPEDIA_BASE_URL + '/wiki/'
-WIKIPEDIA_API_URL = WIKIPEDIA_BASE_URL + '/w/api.php'
 
 MAX_EXCEPTIONS_PER_SUBPROCESS = 10
 
@@ -61,18 +60,19 @@ def e(s):
     return s.encode('utf-8')
 
 def d(s):
-    if type(s) == unicode:
+    if type(s) == str:
         return s
-    return unicode(s, 'utf-8')
+    return str(s, 'utf-8')
 
 def query_pageids(wiki, pageids):
     for pageid in pageids:
         params = {
+            'action': 'query',
             'pageids': pageid,
             'prop': 'extracts',
             'explaintext': 'true'
         }
-        for response in self.wiki.query(params):
+        for response in self.wiki.post(continuation = True, **params):
             for id, page in response['query']['pages'].items():
                 if 'title' not in page:
                     continue
@@ -93,7 +93,7 @@ def initializer(es_session, es_url, es_max_qps):
     self.es_session = es_session
     self.es_next_request_time = datetime.now()
     self.es_max_qps = es_max_qps
-    self.wiki = yamwapi.MediaWikiAPI(WIKIPEDIA_API_URL, USER_AGENT)
+    self.wiki = mwapi.Session(WIKIPEDIA_BASE_URL, user_agent = USER_AGENT)
     self.exception_count = 0
 
 def with_max_exceptions(fn):
