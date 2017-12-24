@@ -68,7 +68,12 @@ def query_pageids(wiki, pageids):
     for pageid in pageids:
         params = {
             'action': 'query',
+            # We query only one page at a time because that's as much as we're
+            # allowed to for full-article requests. We also pass an explicit
+            # exlimit=1 to keep a warning from being generated.
+            # More context: https://phabricator.wikimedia.org/T102856
             'pageids': pageid,
+            'exlimit': 1,
             'prop': 'extracts',
             'explaintext': 'true'
         }
