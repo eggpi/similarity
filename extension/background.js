@@ -32,62 +32,77 @@ let SuggestionsCache = new (function() {
   };
 });
 
-function getDocumentContents(callback) {
-  let script = 'document.documentElement.outerHTML';
-  chrome.tabs.executeScript({
-    code: script
-  }, (result) => { callback(result[0]); });
+function getDocumentContents() {
+  return new Promise((resolve, reject) => {
+    let script = 'document.documentElement.outerHTML';
+    chrome.tabs.executeScript({
+      code: script
+    }, (result) => { resolve(result[0]); });
+  });
 }
 
-function fetchSimilarArticles(html, url, callback) {
+function fetchSimilarArticles(html, url) {
   let formData = new FormData();
   formData.append('html', html);
   formData.append('url', url);
   let o = {method: 'POST', mode: 'cors', body: formData};
-  window.fetch(SIMILARITY_URL, o).then(
+  return window.fetch(SIMILARITY_URL, o).then(
     (response) => { return response.json() }).then(
     (response) => {
       console.log(response['debug']);
-      callback(response['results']);
+      return response['results'];
     });
 }
 
-function getSuggestionsForTab(tab, callback, options) {
-  if (!tab.url) return;
-  let whitelist = loadURLsWhitelist();
-
-  let match = whitelist.some((w) => {
-    return tab.url.match(RegExp(w));
-  });
-  if (!match) {
-    callback([]);
-    return;
-  };
-
-  if (!options || options.canUseCache) {
-    let cached = SuggestionsCache.get(tab.url);
-    if (cached) {
-      callback(cached);
+function getSuggestionsForTab(tab, options) {
+  return new Promise((resolve, reject) => {
+    if (!tab.url) {
+      reject('No URL!');
       return;
     }
-  }
-  getDocumentContents((html) => {
-    fetchSimilarArticles(html, tab.url, suggestions => {
-      SuggestionsCache.set(tab.url, suggestions);
-      callback(suggestions);
+
+    let whitelist = loadURLsWhitelist();
+    let match = whitelist.some((w) => {
+      return tab.url.match(RegExp(w));
     });
+    if (!match) {
+      resolve([]);
+      return;
+    };
+
+    if (!options || options.canUseCache) {
+      let cached = SuggestionsCache.get(tab.url);
+      if (cached) {
+        resolve(cached);
+        return;
+      }
+    }
+
+    resolve(getDocumentContents().then((html) => {
+      return fetchSimilarArticles(html, tab.url);
+    }).then((suggestions) => {
+      SuggestionsCache.set(tab.url, suggestions);
+      return suggestions;
+    }));
+  });
+}
+
+function getSuggestionsAndUpdateUI(tab, options) {
+  getSuggestionsForTab(tab, options).then((articles) => {
+    if (articles.length) {
+      chrome.pageAction.show(tab.id);
+    } else {
+      chrome.pageAction.hide(tab.id);
+    }
+  }).catch((e) => {
+    console.log(e);
+    chrome.pageAction.hide(tab.id);
   });
 }
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
-    getSuggestionsForTab(tab, (articles) => {
-      if (articles.length) {
-        chrome.pageAction.show(tab.id);
-      } else {
-        chrome.pageAction.hide(tab.id);
-      }
-    });
+    getSuggestionsAndUpdateUI(tab);
   });
 });
 
@@ -96,19 +111,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // and changeInfo.status can even be undefined (despite being documented
   // as only ever being either 'loading' or 'complete').
   if (changeInfo.status == 'complete') {
-    getSuggestionsForTab(tab, (articles) => {
-      if (articles.length) {
-        chrome.pageAction.show(tab.id);
-      } else {
-        chrome.pageAction.hide(tab.id);
-      }
-    }, {canUseCache: false});
+    getSuggestionsAndUpdateUI(tab, {canUseCache: false});
   }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-    getSuggestionsForTab(tabs[0], sendResponse);
+    getSuggestionsForTab(tabs[0]).then(sendResponse);
   });
   return true;
 });
