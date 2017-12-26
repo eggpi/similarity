@@ -34,19 +34,8 @@ def page_html_to_text(html, url):
     text = article.text
     return collapse_spaces(description), collapse_spaces(text)
 
-@app.route('/search', methods = ['POST'])
-def search():
-    if 'html' not in flask.request.form or not flask.request.form['html']:
-        return ('POST some data with a "html" form key\n', 400, '')
-    html = flask.request.form['html']
-    url = flask.request.form.get('url', '')
-    description, text = page_html_to_text(html, url)
-
-    # TODO Log the url (or even text?), and search results
-
-    if not text:
-        return flask.jsonify([])
-    res = requests.post(ELASTICSEARCH_SEARCH_URL, json.dumps({
+def query_elasticsearch(text, description):
+    return requests.post(ELASTICSEARCH_SEARCH_URL, json.dumps({
         'size': 10,
         'min_score': 20,
         'query': {
@@ -66,12 +55,29 @@ def search():
             }
         }
     }), auth = app.elasticsearch_auth).json()
-    return flask.jsonify([{
-        'title': h['_source']['title'],
-        'url': h['_source']['url'],
-        'similarity': h['_score'],
-        'pageid': h['_source']['pageid'],
-    } for h in res['hits']['hits']])
+
+@app.route('/search', methods = ['POST'])
+def search():
+    if not flask.request.form.get('html', ''):
+        return ('POST some data with a "html" form key\n', 400, '')
+
+    html = flask.request.form['html']
+    url = flask.request.form.get('url', '')
+    description, text = page_html_to_text(html, url)
+    debug_info = {'description': description, 'html': html, 'text': text}
+    response = {'debug': debug_info, 'results': []}
+
+    # TODO Log the url (or even text?), and search results
+
+    if text:
+        es_response = query_elasticsearch(text, description)
+        response['results'] = [{
+            'title': h['_source']['title'],
+            'url': h['_source']['url'],
+            'similarity': h['_score'],
+            'pageid': h['_source']['pageid'],
+        } for h in es_response['hits']['hits']]
+    return flask.jsonify(response)
 
 @app.route('/', methods = ['GET', 'POST'])
 def similarity():

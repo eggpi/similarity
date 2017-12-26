@@ -45,7 +45,11 @@ function fetchSimilarArticles(html, url, callback) {
   formData.append('url', url);
   let o = {method: 'POST', mode: 'cors', body: formData};
   window.fetch(SIMILARITY_URL, o).then(
-    (response) => { return response.json(); }).then(callback);
+    (response) => { return response.json() }).then(
+    (response) => {
+      console.log(response['debug']);
+      callback(response['results']);
+    });
 }
 
 function getSuggestionsForTab(tab, callback, options) {
