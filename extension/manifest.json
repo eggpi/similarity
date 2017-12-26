@@ -3,7 +3,7 @@
 
     "name": "Wikipedia Needs References",
     "description": "Wikipedia Needs References tells you when a page you are viewing could be a good reference to a Wikipedia article.",
-    "version": "0.0.3",
+    "version": "0.0.4",
 
     "page_action": {
         "default_icon": "icons/icon.png",
