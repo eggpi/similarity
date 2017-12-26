@@ -8,18 +8,14 @@ Given a Petscan query, this script will query the Wikipedia API
 those pages and load them into ElasticSearch.
 
 Usage:
-    populate_elasticsearch.py <petscan_id> <elasticsearch_url>
-        [--auth=<auth_file>]
+    populate_elasticsearch.py <petscan_id>
         [--max_es_qps=<n>]
 
 Options:
-    --auth=<auth_file>  Path to a .ini file HTTP credentials [default: ].
     --max_es_qps=<n>    How many documents to PUT per second [default: 24].
-
-Where <elasticsearch> is of the form https://<host>:<port>/<alias>/<type>.
-This script will ensure the <alias> exists, create an index named
-<alias>_<current time> and move the alias to point to it.
 '''
+
+from config import config
 
 import docopt
 import mwapi
@@ -166,20 +162,14 @@ def build_petscan_url(petscan_id):
     return 'https://petscan.wmflabs.org?format=json&psid=%s&after=%s' % (
         petscan_id, four_months_ago.strftime('%Y%m%d'))
 
-def main(petscan_id, elasticsearch_url, auth_file, max_es_qps):
-    auth = None
-    if auth_file:
-        auth_dict = {k.strip(): v.strip(' \n"')
-            for line in open(auth_file).readlines()
-            for k, v in [line.split('=', 1)]}
-        auth = auth_dict['user'], auth_dict['password']
+def main(petscan_id, max_es_qps):
     es_session = requests.Session()
-    es_session.auth = auth
+    es_session.auth = config.elasticsearch_auth
 
-    es_base_url, es_alias, es_type = elasticsearch_url.rsplit('/', 2)
     date_str = datetime.now().strftime(INDEX_DATE_FORMAT)
-    new_index_name = '%s_%s' % (es_alias, date_str)
-    new_index_url = '%s/%s/%s' % (es_base_url, new_index_name, es_type)
+    new_index_name = '%s_%s' % (config.elasticsearch_index, date_str)
+    new_index_url = '%s/%s/%s' % (
+        config.elasticsearch_host, new_index_name, config.elasticsearch_type)
 
     petscan_response = requests.get(build_petscan_url(petscan_id))
     pageids = [obj['id'] for obj in petscan_response.json()['*'][0]['a']['*']]
@@ -187,7 +177,7 @@ def main(petscan_id, elasticsearch_url, auth_file, max_es_qps):
     tasks = [pageids[i:i + chunksz] for i in range(0, len(pageids), chunksz)]
 
     print('populating elasticsearch alias %s, type %s with %d pages' % (
-        es_alias, es_type, len(pageids)))
+        config.elasticsearch_index, config.elasticsearch_type, len(pageids)))
 
     max_qps = float(max_es_qps) / multiprocessing.cpu_count()
     assert max_qps > 0
@@ -195,14 +185,14 @@ def main(petscan_id, elasticsearch_url, auth_file, max_es_qps):
         initializer = initializer,
         initargs = (es_session, new_index_url, max_qps))
     pool.map(work, tasks)
-    move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name)
+    move_elasticsearch_alias(
+        es_session, config.elasticsearch_host,
+        config.elasticsearch_index, new_index_name)
 
 if __name__ == '__main__':
     start = time.time()
     arguments = docopt.docopt(__doc__)
     ret = main(
         arguments['<petscan_id>'],
-        arguments['<elasticsearch_url>'],
-        arguments['--auth'],
         int(arguments['--max_es_qps']))
     print('all done in %d seconds.' % (time.time() - start))
