@@ -4,18 +4,18 @@ let SuggestionsCache = new (function() {
   const MAX_CACHE_SIZE = 10;
   const ENTRY_TTL_S = 10 * 60;
 
-  let cache = [];
+  this._cache = [];
 
-  function expire() {
-    cache = cache.filter((entry) => {
+  this._expire = () => {
+    this._cache = this._cache.filter((entry) => {
       return ((new Date() - entry.date) / 1000) < ENTRY_TTL_S;
     });
   }
 
   this.get = key => {
-    expire();
-    for (let i = 0; i < cache.length; i++) {
-      let entry = cache[i];
+    this._expire();
+    for (let i = 0; i < this._cache.length; i++) {
+      let entry = this._cache[i];
       if (entry.key === key) {
         return entry.value;
       }
@@ -24,12 +24,12 @@ let SuggestionsCache = new (function() {
   };
 
   this.set = (key, value) => {
-    expire();
-    if (cache.length == MAX_CACHE_SIZE) {
-      cache.shift();
+    this._expire();
+    if (this._cache.length == MAX_CACHE_SIZE) {
+      this._cache.shift();
     }
-    cache = cache.filter(entry => { entry.key !== key });
-    cache.push({key: key, value: value, date: new Date()});
+    this._cache = this._cache.filter(entry => entry.key !== key);
+    this._cache.push({key: key, value: value, date: new Date()});
   };
 });
 
