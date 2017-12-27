@@ -28,6 +28,7 @@ let SuggestionsCache = new (function() {
     if (cache.length == MAX_CACHE_SIZE) {
       cache.shift();
     }
+    cache = cache.filter(entry => { entry.key !== key });
     cache.push({key: key, value: value, date: new Date()});
   };
 });
