@@ -6,6 +6,15 @@ import requests
 
 import json
 import re
+import time
+
+class Stopwatch(object):
+    def __init__(self):
+        self._time = time.time()
+
+    def split(self):
+        t, self._time = self._time, time.time()
+        return self._time - t
 
 _COLLAPSE_SPACES_REGEX = re.compile(r'\s+')
 
@@ -46,16 +55,24 @@ def search():
     if not flask.request.form.get('html', ''):
         return ('POST some data with a "html" form key\n', 400, '')
 
+    stopwatch = Stopwatch()
+    debug_info = {'timings': {}}
+    response = {'debug': debug_info, 'results': []}
+
     html = flask.request.form['html']
     url = flask.request.form.get('url', '')
     description, text = _page_html_to_text(html, url)
-    debug_info = {'description': description, 'html': html, 'text': text}
-    response = {'debug': debug_info, 'results': []}
+
+    debug_info['html'] = html
+    debug_info['text'] = text
+    debug_info['description'] = description
+    debug_info['timings']['html_to_text'] = stopwatch.split()
 
     # TODO Log the url (or even text?), and search results
 
     if text:
         es_response = _query_elasticsearch(text, description)
+        debug_info['timings']['elasticsearch'] = stopwatch.split()
         response['results'] = [{
             'title': h['_source']['title'],
             'url': h['_source']['url'],
