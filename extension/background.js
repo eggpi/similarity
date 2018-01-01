@@ -2,18 +2,10 @@ const SIMILARITY_URL = 'https://tools.wmflabs.org/similarity/search';
 
 let SuggestionsCache = new (function() {
   const MAX_CACHE_SIZE = 10;
-  const ENTRY_TTL_S = 10 * 60;
 
   this._cache = [];
 
-  this._expire = () => {
-    this._cache = this._cache.filter((entry) => {
-      return ((new Date() - entry.date) / 1000) < ENTRY_TTL_S;
-    });
-  }
-
   this.get = key => {
-    this._expire();
     for (let i = 0; i < this._cache.length; i++) {
       let entry = this._cache[i];
       if (entry.key === key) {
@@ -24,12 +16,15 @@ let SuggestionsCache = new (function() {
   };
 
   this.set = (key, value) => {
-    this._expire();
     if (this._cache.length == MAX_CACHE_SIZE) {
       this._cache.shift();
     }
+    this.remove(key);
+    this._cache.push({key: key, value: value});
+  };
+
+  this.remove = (key) => {
     this._cache = this._cache.filter(entry => entry.key !== key);
-    this._cache.push({key: key, value: value, date: new Date()});
   };
 });
 
@@ -72,7 +67,7 @@ function getSuggestionsForTab(tab, options) {
     };
 
     if (!options || options.canUseCache) {
-      let cached = SuggestionsCache.get(tab.url);
+      let cached = SuggestionsCache.get(tab.id);
       if (cached) {
         resolve(cached);
         return;
@@ -82,7 +77,7 @@ function getSuggestionsForTab(tab, options) {
     resolve(getDocumentContents().then((html) => {
       return fetchSimilarArticles(html, tab.url);
     }).then((suggestions) => {
-      SuggestionsCache.set(tab.url, suggestions);
+      SuggestionsCache.set(tab.id, suggestions);
       return suggestions;
     }));
   });
@@ -105,6 +100,10 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     getSuggestionsAndUpdateUI(tab);
   });
+});
+
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  SuggestionsCache.remove(tabId);
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
