@@ -28,10 +28,10 @@ let SuggestionsCache = new (function() {
   };
 });
 
-function getDocumentContents() {
+function getDocumentContents(tabId) {
   return new Promise((resolve, reject) => {
     let script = 'document.documentElement.outerHTML';
-    chrome.tabs.executeScript({
+    chrome.tabs.executeScript(tabId, {
       code: script
     }, (result) => { resolve(result[0]); });
   });
@@ -74,7 +74,7 @@ function getSuggestionsForTab(tab, options) {
       }
     }
 
-    resolve(getDocumentContents().then((html) => {
+    resolve(getDocumentContents(tab.id).then((html) => {
       return fetchSimilarArticles(html, tab.url);
     }).then((suggestions) => {
       SuggestionsCache.set(tab.id, suggestions);
