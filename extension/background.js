@@ -50,7 +50,7 @@ function fetchSimilarArticles(html, url) {
     });
 }
 
-function getSuggestionsForTab(tab, options) {
+function getSuggestionsForTab(tab) {
   return new Promise((resolve, reject) => {
     if (!tab.url) {
       reject('No URL!');
@@ -66,12 +66,10 @@ function getSuggestionsForTab(tab, options) {
       return;
     };
 
-    if (!options || options.canUseCache) {
-      let cached = SuggestionsCache.get(tab.id);
-      if (cached) {
-        resolve(cached);
-        return;
-      }
+    let cached = SuggestionsCache.get(tab.id);
+    if (cached) {
+      resolve(cached);
+      return;
     }
 
     resolve(getDocumentContents(tab.id).then((html) => {
@@ -83,8 +81,8 @@ function getSuggestionsForTab(tab, options) {
   });
 }
 
-function getSuggestionsAndUpdateUI(tab, options) {
-  getSuggestionsForTab(tab, options).then((articles) => {
+function getSuggestionsAndUpdateUI(tab) {
+  getSuggestionsForTab(tab).then((articles) => {
     if (articles.length) {
       chrome.pageAction.show(tab.id);
     } else {
@@ -103,6 +101,8 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  // TODO Also cancel any ongoing fetch() for this tab, when abortable
+  // fetch() is actually supported in the browser.
   SuggestionsCache.remove(tabId);
 });
 
@@ -111,7 +111,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // and changeInfo.status can even be undefined (despite being documented
   // as only ever being either 'loading' or 'complete').
   if (changeInfo.status == 'complete') {
-    getSuggestionsAndUpdateUI(tab, {canUseCache: false});
+    // TODO Also cancel any ongoing fetch() for this tab, when abortable
+    // fetch() is actually supported in the browser.
+    SuggestionsCache.remove(tabId);
+    getSuggestionsAndUpdateUI(tab);
   }
 });
 
