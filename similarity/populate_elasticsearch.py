@@ -198,7 +198,7 @@ if __name__ == '__main__':
             'similarity_update' + '.' + ext for ext in ('out', 'err')
         ]
         for logfile in logfiles:
-            file(logfile, 'w').close()  # truncate
+            open(logfile, 'w').close()  # truncate
 
     success = True
     start = time.time()
