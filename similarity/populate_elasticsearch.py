@@ -125,18 +125,18 @@ def work(pageids):
             except (IndexError, AttributeError):
                 # no heading or empty section?
                 pass
-        esdoc = json.dumps({
+        esdoc = {
             'pageid': pageid,
             'url': url,
             'title': title,
             'text': wdoc.strip_code()
-        })
+        }
         time.sleep(max(
             0, (self.es_next_request_time - datetime.now()).total_seconds()))
         self.es_next_request_time = datetime.now() + timedelta(
             seconds = 1.0 / self.es_max_qps)
         # TODO Write the full batch using the bulk API in ES
-        response = self.es_session.put(self.es_url + '/' + pageid, esdoc)
+        response = self.es_session.put(self.es_url + '/' + pageid, json = esdoc)
         response.raise_for_status()
 
 def move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name):
@@ -154,7 +154,7 @@ def move_elasticsearch_alias(es_session, es_base_url, es_alias, new_index_name):
 
     move_req['actions'].append(
         {'add': {'index': new_index_name, 'alias': es_alias}})
-    move_res = es_session.post(es_base_url + '/_aliases', json.dumps(move_req))
+    move_res = es_session.post(es_base_url + '/_aliases', json = move_req)
     move_res.raise_for_status()
     assert 'error' not in move_res.json(), (move_req, move_res)
 
