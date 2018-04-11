@@ -15,6 +15,7 @@ Options:
     --max_es_qps=<n>    How many documents to PUT per second [default: 24].
 '''
 
+import toolforge_utils
 from config import config
 
 import docopt
@@ -190,9 +191,25 @@ def main(petscan_id, max_es_qps):
         config.elasticsearch_index, new_index_name)
 
 if __name__ == '__main__':
-    start = time.time()
     arguments = docopt.docopt(__doc__)
-    ret = main(
-        arguments['<petscan_id>'],
-        int(arguments['--max_es_qps']))
-    print('all done in %d seconds.' % (time.time() - start))
+
+    if toolforge_utils.running_in_toolforge():
+        # Should match the job's name in crontab
+        logfiles = [
+            'similarity_update' + '.' + ext for ext in ('out', 'err')
+        ]
+        for logfile in logfiles:
+            file(logfile, 'w').close()  # truncate
+
+    success = True
+    start = time.time()
+    try:
+        main(arguments['<petscan_id>'], int(arguments['--max_es_qps']))
+    except BaseException as e:
+        print(e, file = sys.stderr)
+        success = False
+
+    if toolforge_utils.running_in_toolforge():
+        toolforge_utils.email('Similarity update %s after %d seconds!' % (
+            'succeeded' if success else 'failed',
+            (time.time() - start), logfiles))
