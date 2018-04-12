@@ -209,6 +209,7 @@ if __name__ == '__main__':
         success = False
 
     if toolforge_utils.running_in_toolforge():
-        toolforge_utils.email('Similarity update %s after %d seconds!' % (
-            'succeeded' if success else 'failed',
-            (time.time() - start), logfiles))
+        toolforge_utils.email(
+            'Similarity update %s after %d seconds!' % (
+                'succeeded' if success else 'failed', (time.time() - start)),
+            logfiles)
