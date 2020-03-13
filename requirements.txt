@@ -2,7 +2,7 @@ docopt==0.6.2
 Flask==0.12.2
 lxml==4.0.0
 mwparserfromhell==0.5
-requests==2.18.4
+requests==2.20.0
 mwapi==0.5.0
 newspaper3k==0.2.5
 # Pillow is a dependence of newspaper3k, not ours, but --disable-jpeg is
