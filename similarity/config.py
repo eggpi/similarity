@@ -3,7 +3,7 @@ import types
 
 _ELASTICSEARCH_HOST = os.environ.get(
     'SIMILARITY_ELASTICSEARCH_HOST',
-    'http://tools-elastic-01.tools.eqiad.wmflabs:80')
+    'http://elasticsearch.svc.tools.eqiad1.wikimedia.cloud')
 _ELASTICSEARCH_INDEX = 'similarity'
 _ELASTICSEARCH_TYPE = 'needs_references'
 
